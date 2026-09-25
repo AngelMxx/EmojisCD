@@ -20,6 +20,53 @@
    be picked up and moved like a small window, per the CEP-Popup/CEP-In
    opacity+transform pattern already in place.
    ========================================================================== */
+
+:root {
+    /* ========================================================= */
+    /* 1. BASE COLORS & UI                                      */
+    /* ========================================================= */
+    --bg-main: #050505;
+    --bg-lvl-1: #111111;
+    --bg-lvl-2: #1a1a1a;
+    --bg-lvl-3: #2a2a2a;
+    --text-color-main: #ffffff;
+    --hover-btn-color: rgba(255, 255, 255, 0.05);
+    --hover-btn-color-1: rgba(255, 255, 255, 0.1);
+    --hover-btn-color-2: rgba(255, 255, 255, 0.2);
+    /* ========================================================= */
+    /* 2. ACCENT COLORS (ANTES CONFIGURABLES - AHORA FIJOS)     */
+    /* ========================================================= */
+    --active-btn-color: #5662f6;
+    --active-btn-color-2: #101331;
+    --active-btn-color-glass: rgba(86, 97, 246, 0.5);
+    --active-btn-color-2-glass: rgba(16, 19, 49, 0.5);
+    --color-warning: #ff4757;
+    --color-warning-05: rgba(255, 71, 86, 0.5);
+    --color-warning-03: rgba(255, 71, 86, 0.3);
+    --color-warning-01: rgba(255, 71, 86, 0.1);
+    --color-success: #20bf6b;
+    --color-info: #1e90ff;
+    /* ========================================================= */
+    /* 4. PHYSICS & MISC                                        */
+    /* ========================================================= */
+    --transition-0: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
+    --transition-1: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    --transition-2: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    --transition-3: all 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+    --border-radious-0: 15px;
+    --border-radious-1: 20px;
+    --border-radious-2: 25px;
+    --border-radious-3: 30px;
+    --border-radious-4: 35px;
+    --offline-status: rgba(255, 255, 255, 0.3);
+    --border-focus: 2px solid var(--active-btn-color);
+    --Switch-inactive: #2b2b2b;
+    /* Music Specifics */
+    --Song-idle: #474747;
+    --Song-playing: var(--active-btn-color);
+    --Song-next: #20bf6b;
+    --Banner-active-color: var(--active-btn-color);
+}
  
 .CEP-Popup {
     position: fixed;
