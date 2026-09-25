@@ -10,12 +10,37 @@
 // Features
 //   · Category rail, search by name and keyword, recent emoji (persisted)
 //   · Full keyboard control: arrows walk the grid, Enter picks, Escape closes
-//   · Anchored to whatever opened it, flipped and clamped by CodexAnchor
+//   · Anchored to whatever opened it, flipped and clamped by CodexAnchor —
+//     or, with no anchor at all, opens as a free-floating window
+//   · Drag the top bar to move it anywhere; its position is remembered
+//     (per browser) the next time it opens without an anchor
+//   · Global "Y" shortcut opens/closes it with no trigger button required
+//     (see SHORTCUT below for exactly when it does and doesn't fire)
 //   · Closes on outside click and on Escape — NOT on window blur: opening
 //     DevTools blurs the window, so a blur-close made the picker impossible to
 //     inspect. Leaving it open across an app switch is also the friendlier
 //     behaviour.
 //   · Skin tone applied to every emoji that supports it, remembered globally
+//
+// DROP-IN USE — this is the whole point of the rewrite. A project that wants
+// the picker adds exactly one tag:
+//     <script src="https://cdn.jsdelivr.net/gh/you/repo/Shared/EmojiPicker.js"></script>
+// The script locates its own URL (via document.currentScript) and injects a
+// <link rel="stylesheet"> for EmojiPicker.css from that same folder, so the
+// CSS never has to be linked by hand and can never go stale relative to the
+// JS. This only works with a plain, non-deferred, non-module <script src>
+// tag — that's what makes document.currentScript reliable — and it silently
+// does nothing (falls back to relying on a manually-linked stylesheet) if
+// the script was injected dynamically or run as a module.
+//
+// SHORTCUT — pressing "Y" toggles the picker, with one safety rule: if
+// document.activeElement is a normal input/textarea/contenteditable, "Y" is
+// left alone so it still just types the letter. To make a specific textarea
+// open-with-insert on Y, give it `data-cep-target`; anywhere else (nothing
+// focused, or focus on a button/div/etc.) "Y" opens a floating picker with
+// no insertion target, purely for onPick/copy use. Call
+// CodexEmoji.disableShortcut() to turn this off for a page, or
+// CodexEmoji.setShortcutKey('e') to rebind it.
 //
 // EXTENSIBILITY — this is why it takes a `sets` option.
 // Codex will grow custom emoji (server emoji, shop packs). Those are images,
@@ -43,13 +68,34 @@
 //   CodexEmoji.insertInto(textarea, text)   // caret-aware insert, exported
 //                                           // because the composer needs the
 //                                           // same behaviour for other inserts
+//   CodexEmoji.enableShortcut() / disableShortcut()
+//   CodexEmoji.setShortcutKey(key)          // default 'y'
 // ============================================================================
+ 
+(() => {
+    // ── Auto-load the stylesheet ────────────────────────────────────────────
+    // Must run synchronously while the script is first evaluated — that's the
+    // only moment document.currentScript is reliable — so it lives at the very
+    // top of the file, outside everything else.
+    try {
+        const thisScript = document.currentScript;
+        const src = thisScript && thisScript.src;
+        if (src && !document.getElementById('CEP-auto-css')) {
+            const link = document.createElement('link');
+            link.id = 'CEP-auto-css';
+            link.rel = 'stylesheet';
+            link.href = src.replace(/EmojiPicker\.js(\?.*)?$/, 'EmojiPicker.css$1');
+            document.head.appendChild(link);
+        }
+    } catch { /* dynamic/module load, or no DOM yet — caller links the CSS itself */ }
+})();
  
 const CodexEmoji = (() => {
     'use strict';
  
     const RECENT_KEY = 'codex_recent_emoji';
     const TONE_KEY = 'codex_emoji_tone';
+    const POS_KEY = 'codex_emoji_pos';
     const RECENT_MAX = 24;
  
     // Skin tone modifiers. Index 0 is "no modifier".
@@ -318,6 +364,8 @@ const CodexEmoji = (() => {
     // ── State ────────────────────────────────────────────────────────────────
     let _root = null, _opts = {}, _cat = 'smileys', _query = '', _tone = readTone();
     let _cells = [], _focus = -1;
+    let _dragged = false;          // this open()'s picker was manually moved
+    let _shortcutEnabled = true, _shortcutKey = 'y';
  
     const isOpen = () => !!_root;
  
@@ -339,6 +387,16 @@ const CodexEmoji = (() => {
         const root = el('div', 'CEP-Popup');
         root.setAttribute('role', 'dialog');
         root.setAttribute('aria-label', _opts.title || 'Emoji');
+ 
+        // Drag bar — the picker behaves like a small window: grab this to move
+        // it, independent of whatever it was anchored to.
+        const bar = el('div', 'CEP-Bar', root);
+        el('span', 'CEP-Bar-Title', bar).textContent = _opts.title || 'Emoji';
+        const closeBtn = el('button', 'CEP-Close', bar);
+        closeBtn.type = 'button';
+        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.innerHTML = icon('M6 6l12 12M18 6 6 18');
+        closeBtn.addEventListener('click', (e) => { e.stopPropagation(); close(); });
  
         // Search
         const head = el('div', 'CEP-Head', root);
@@ -573,26 +631,92 @@ const CodexEmoji = (() => {
         ta.dispatchEvent(new Event('input', { bubbles: true }));
     }
  
+    // ── Draggable window ─────────────────────────────────────────────────────
+    const clampX = (x, w) => Math.max(12, Math.min(x, window.innerWidth - w - 12));
+    const clampY = (y, h) => Math.max(12, Math.min(y, window.innerHeight - h - 12));
+ 
+    function readPos() {
+        try {
+            const p = JSON.parse(localStorage.getItem(POS_KEY));
+            return (p && Number.isFinite(p.left) && Number.isFinite(p.top)) ? p : null;
+        } catch { return null; }
+    }
+    function writePos(left, top) {
+        try { localStorage.setItem(POS_KEY, JSON.stringify({ left, top })); } catch { }
+    }
+ 
+    /**
+     * Grab the bar, move the popup. Works whether the picker opened anchored
+     * to a button or floating with no anchor at all — once dragged, `place()`
+     * stops trying to re-anchor it for the rest of this open() session, and
+     * the position is remembered for the next anchor-less open.
+     */
+    function makeDraggable(root, handle) {
+        let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+ 
+        handle.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.CEP-Close')) return;
+            dragging = true;
+            handle.setPointerCapture(e.pointerId);
+            const r = root.getBoundingClientRect();
+            sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+            root.classList.add('CEP-Dragging');
+        });
+        handle.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            _dragged = true;
+            const w = root.offsetWidth, h = root.offsetHeight;
+            const left = clampX(ox + (e.clientX - sx), w);
+            const top = clampY(oy + (e.clientY - sy), h);
+            root.style.left = left + 'px';
+            root.style.top = top + 'px';
+        });
+        const stop = (e) => {
+            if (!dragging) return;
+            dragging = false;
+            root.classList.remove('CEP-Dragging');
+            try { handle.releasePointerCapture(e.pointerId); } catch { }
+            if (_dragged) writePos(parseFloat(root.style.left), parseFloat(root.style.top));
+        };
+        handle.addEventListener('pointerup', stop);
+        handle.addEventListener('pointercancel', stop);
+    }
+ 
     // ── Open / close ─────────────────────────────────────────────────────────
     function place() {
-        if (!_root || !_opts.anchor) return;
-        const r = _opts.anchor.getBoundingClientRect();
-        const w = _root.offsetWidth || 340;
-        const h = _root.offsetHeight || 400;
-        const A = window.CodexAnchor;
+        if (!_root) return;
+        const w = _root.offsetWidth || 355;
+        const h = _root.offsetHeight || 420;
  
-        // Above the anchor by default — it hangs off a composer at the bottom
-        // of the screen — flipping below only when there is no room up there.
-        const above = r.top - 10 - h;
-        const top = above >= 12 ? above : r.bottom + 10;
-        // Right-align with the anchor: the button is near the right edge, so a
-        // left-aligned panel would run off screen.
-        const left = r.right - w;
+        if (_opts.anchor && !_dragged) {
+            const r = _opts.anchor.getBoundingClientRect();
+            const A = window.CodexAnchor;
  
-        _root.style.left = (A ? A.clampH(left, w)
-            : Math.max(12, Math.min(left, window.innerWidth - w - 12))) + 'px';
-        _root.style.top = (A ? A.clampV(top, h)
-            : Math.max(12, Math.min(top, window.innerHeight - h - 12))) + 'px';
+            // Above the anchor by default — it hangs off a composer at the
+            // bottom of the screen — flipping below only when there's no room.
+            const above = r.top - 10 - h;
+            const top = above >= 12 ? above : r.bottom + 10;
+            // Right-align with the anchor: the button is near the right edge,
+            // so a left-aligned panel would run off screen.
+            const left = r.right - w;
+ 
+            _root.style.left = (A ? A.clampH(left, w) : clampX(left, w)) + 'px';
+            _root.style.top = (A ? A.clampV(top, h) : clampY(top, h)) + 'px';
+            return;
+        }
+ 
+        // Floating window: pick up where the user last left it, or start
+        // centered the very first time.
+        if (_dragged) {
+            _root.style.left = clampX(parseFloat(_root.style.left) || 0, w) + 'px';
+            _root.style.top = clampY(parseFloat(_root.style.top) || 0, h) + 'px';
+            return;
+        }
+        const saved = !_opts.anchor ? readPos() : null;
+        const left = saved ? saved.left : (window.innerWidth - w) / 2;
+        const top = saved ? saved.top : (window.innerHeight - h) / 2;
+        _root.style.left = clampX(left, w) + 'px';
+        _root.style.top = clampY(top, h) + 'px';
     }
  
     function onDocDown(e) {
@@ -607,9 +731,11 @@ const CodexEmoji = (() => {
         _opts = opts;
         _cat = readRecent().length ? 'recent' : 'smileys';
         _query = '';
+        _dragged = false;
  
         _root = build();
         document.body.appendChild(_root);
+        makeDraggable(_root, _root.querySelector('.CEP-Bar'));
         rebuildRail();
         renderGrid();
         paintTone();
@@ -651,9 +777,44 @@ const CodexEmoji = (() => {
         return pool[Math.floor(Math.random() * pool.length)].char;
     }
  
+    // ── Global shortcut ──────────────────────────────────────────────────────
+    // "Y" toggles the picker with no trigger button anywhere on the page.
+    // This is a document-level listener, independent of open()/close() — it
+    // has to work while the picker is closed, which is the whole point.
+    function isEditable(node) {
+        if (!node) return false;
+        const tag = node.tagName;
+        return tag === 'INPUT' || tag === 'TEXTAREA' || !!node.isContentEditable;
+    }
+ 
+    function onShortcut(e) {
+        if (!_shortcutEnabled || e.defaultPrevented) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key.toLowerCase() !== _shortcutKey.toLowerCase()) return;
+ 
+        const ae = document.activeElement;
+        const editable = isEditable(ae);
+        // A plain input/textarea keeps typing "y" normally UNLESS it opted in
+        // with data-cep-target — that's what lets one composer use "Y" to
+        // open-with-insert without every text field on the page losing the
+        // letter y.
+        const optedIn = editable && ae.hasAttribute('data-cep-target');
+        if (editable && !optedIn) return;
+ 
+        e.preventDefault();
+        if (isOpen()) { close(); return; }
+        open(optedIn ? { anchor: ae, target: ae } : {});
+    }
+    document.addEventListener('keydown', onShortcut, true);
+ 
+    function enableShortcut() { _shortcutEnabled = true; }
+    function disableShortcut() { _shortcutEnabled = false; }
+    function setShortcutKey(key) { if (key) _shortcutKey = String(key).slice(0, 1); }
+ 
     return {
         open, close, isOpen, registerSet, unregisterSet, insertInto,
         readRecent, randomEmoji, CATEGORIES,
+        enableShortcut, disableShortcut, setShortcutKey,
     };
 })();
  

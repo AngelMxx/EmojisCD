@@ -8,14 +8,24 @@
    Everything here is expressed in Codex tokens (--bg-lvl-*, --border-radious-*,
    --transition-*, --active-btn-color). The colour picker predates Tokens.css
    and still hardcodes #0b0b0d; this one doesn't, so it follows the app if the
-   palette ever moves.
+   palette ever moves. Any host page just needs those tokens defined on
+   :root — no other dependency.
+
+   This file does NOT need to be linked by hand: EmojiPicker.js auto-injects
+   a <link rel="stylesheet"> pointing at whatever URL it was loaded from,
+   with EmojiPicker.js swapped for EmojiPicker.css. Keep both files sitting
+   side by side (same folder, same name) wherever this is hosted.
+
+   Adds a drag bar (.CEP-Bar) on top of the original layout so the popup can
+   be picked up and moved like a small window, per the CEP-Popup/CEP-In
+   opacity+transform pattern already in place.
    ========================================================================== */
  
 .CEP-Popup {
     position: fixed;
     z-index: 3000;
     width: 355px;
-    height: 386px;
+    height: 420px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -35,6 +45,60 @@
     opacity: 1;
     transform: none;
     overflow: hidden;
+}
+ 
+/* While dragging, skip the opacity/transform transition so the popup tracks
+   the pointer 1:1 instead of trailing behind it. */
+.CEP-Popup.CEP-Dragging {
+    transition: none;
+}
+ 
+/* ── drag bar ───────────────────────────────────────────────────────────── */
+.CEP-Bar {
+    flex: none;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px 0 12px;
+    cursor: grab;
+    touch-action: none;
+}
+ 
+.CEP-Bar:active {
+    cursor: grabbing;
+}
+ 
+.CEP-Bar-Title {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: rgba(255, 255, 255, .45);
+    pointer-events: none;
+}
+ 
+.CEP-Close {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: var(--border-radious-0);
+    background: transparent;
+    color: rgba(255, 255, 255, .45);
+    cursor: pointer;
+    transition: var(--transition-0);
+}
+ 
+.CEP-Close svg {
+    width: 13px;
+    height: 13px;
+}
+ 
+.CEP-Close:hover {
+    background: var(--hover-btn-color-1);
+    color: var(--text-color-main);
 }
  
 /* ── search ─────────────────────────────────────────────────────────────── */
