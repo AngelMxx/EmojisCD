@@ -1,0 +1,315 @@
+/* ============================================================================
+   CODEX — EMOJI PICKER  (Shared/EmojiPicker.css)
+   ----------------------------------------------------------------------------
+   Styles for the shared CodexEmoji popup. Self-contained: every selector is
+   CEP-prefixed so it can be dropped into any page without collisions, exactly
+   like ColorPicker.css and its CCP- prefix.
+ 
+   Everything here is expressed in Codex tokens (--bg-lvl-*, --border-radious-*,
+   --transition-*, --active-btn-color). The colour picker predates Tokens.css
+   and still hardcodes #0b0b0d; this one doesn't, so it follows the app if the
+   palette ever moves.
+   ========================================================================== */
+ 
+.CEP-Popup {
+    position: fixed;
+    z-index: 3000;
+    width: 355px;
+    height: 386px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--border-radious-1);
+    background: var(--bg-lvl-1);
+    border: 2px solid var(--bg-lvl-2);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, .62);
+    font-family: 'concordNormal', Arial, sans-serif;
+    color: var(--text-color-main);
+    user-select: none;
+    opacity: 0;
+    transform: translateY(6px) scale(.985);
+    transition: var(--transition-1);
+}
+ 
+.CEP-Popup.CEP-In {
+    opacity: 1;
+    transform: none;
+    overflow: hidden;
+}
+ 
+/* ── search ─────────────────────────────────────────────────────────────── */
+.CEP-Head {
+    padding: 8px 8px 10px 8px;
+    flex: none;
+}
+ 
+.CEP-Search {
+    width: 100%;
+    width: 100%;
+    height: 32px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    border: none;
+    border-radius: var(--border-radious-0);
+    background: rgb(0, 0, 0, 0.3);
+    color: var(--text-color-main);
+    font-family: inherit;
+    font-size: 12.5px;
+    user-select: text;
+    transition: var(--transition-0);
+    outline: 2px solid var(--bg-lvl-2);
+    /* outline-offset: -2px; */
+}
+ 
+.CEP-Search::placeholder {
+    color: rgba(255, 255, 255, .32);
+}
+ 
+.CEP-Search:focus {
+    outline-color: var(--bg-lvl-3);
+}
+ 
+/* ── category rail ──────────────────────────────────────────────────────── */
+.CEP-Rail {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0px 8px 8px 8px;
+    margin: 0px;
+    /* border-radius: var(--border-radious-1); */
+    /* background: rgb(0, 0, 0, 0.3); */
+    border-bottom: 2px solid var(--hover-btn-color);
+}
+ 
+.CEP-Cat {
+    flex: 1;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: var(--border-radious-0);
+    background: transparent;
+    color: rgba(255, 255, 255, .38);
+    cursor: pointer;
+    position: relative;
+    transition: var(--transition-0);
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+}
+ 
+.CEP-Cat:hover {
+    outline-color: var(--bg-lvl-2);
+    color: rgba(255, 255, 255, .75);
+}
+ 
+.CEP-Cat.CEP-Cat-Active {
+    background: white;
+    color: black;
+    pointer-events: none;
+}
+ 
+/* The active accent bar, same idiom as the nav rail. */
+.CEP-Cat.CEP-Cat-Active::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -7px;
+    width: 16px;
+    height: 2px;
+    margin-left: -8px;
+    border-radius: 1000px;
+    background: white;
+}
+ 
+.CEP-Cat svg {
+    width: 21px;
+    height: 21px;
+}
+ 
+.CEP-Cat img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+ 
+/* ── grid ───────────────────────────────────────────────────────────────── */
+.CEP-Body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+}
+ 
+.CEP-Body::-webkit-scrollbar {
+    width: 8px;
+}
+ 
+.CEP-Body::-webkit-scrollbar-thumb {
+    background: var(--hover-btn-color-2);
+    border-radius: 4px;
+}
+ 
+.CEP-Body::-webkit-scrollbar-track {
+    background: transparent;
+}
+ 
+.CEP-Grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+}
+ 
+.CEP-Cell {
+    aspect-ratio: 1/1;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: var(--border-radious-0);
+    background: transparent;
+    /* Emoji render from the system font, so the app font must NOT apply — it
+       has no glyphs for them and would drop back to tofu on some systems. */
+    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform .1s, background .1s;
+}
+ 
+.CEP-Cell:hover,
+.CEP-Cell.CEP-Cell-Focus {
+    background: var(--hover-btn-color-1);
+    transform: scale(1.12);
+}
+ 
+.CEP-Cell.CEP-Cell-Focus {
+    box-shadow: inset 0 0 0 1.5px var(--active-btn-color);
+}
+ 
+.CEP-Cell img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+ 
+.CEP-Empty {
+    grid-column: 1 / -1;
+    padding: 42px 16px;
+    text-align: center;
+    color: rgba(255, 255, 255, .3);
+    font-size: 12px;
+    line-height: 1.5;
+}
+ 
+/* ── footer: hovered emoji + skin tone ──────────────────────────────────── */
+.CEP-Foot {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin: 2px 6px 6px;
+    border-radius: var(--border-radious-1);
+    /* border-top: 1px solid var(--hover-btn-color); */
+    background: rgb(0, 0, 0, 0.3);
+}
+ 
+.CEP-Preview {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+ 
+.CEP-Preview-Glyph {
+    width: 24px;
+    flex: none;
+    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    font-size: 20px;
+    line-height: 1;
+}
+ 
+.CEP-Preview-Glyph img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+ 
+.CEP-Preview-Name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, .45);
+}
+ 
+.CEP-Tone {
+    width: 34px;
+    height: 28px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: var(--border-radious-0);
+    background: var(--bg-lvl-1);
+    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--transition-0);
+}
+ 
+.CEP-Tone:hover {
+    background: var(--hover-btn-color-1);
+}
+ 
+.CEP-Tones {
+    position: absolute;
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 1000px;
+    background: var(--bg-lvl-2);
+    border: 1px solid var(--bg-lvl-3);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .5);
+}
+ 
+.CEP-Tone-Opt {
+    width: 34px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: 1000px;
+    background: transparent;
+    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--transition-0);
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+}
+ 
+.CEP-Tone-Opt:hover {
+    outline-color: var(--bg-lvl-3);
+}
+ 
+.CEP-Tone-Opt.CEP-Tone-Active {
+    background: var(--active-btn-color-2);
+    outline-color: var(--active-btn-color);
+    pointer-events: none;
+}
+ 
+/* Blocky mode needs no rule here: Settings.JS injects
+   `html.concord-mode-blocky *` with border-radius:0 !important, which already
+   reaches into this popup. Adding a local copy would be a second source of
+   truth for the same setting. */
