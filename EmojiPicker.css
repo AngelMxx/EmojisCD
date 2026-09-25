@@ -21,7 +21,13 @@
    opacity+transform pattern already in place.
    ========================================================================== */
 
-:root {
+/* :where(:root) en vez de :root: especificidad 0, así estos valores actúan
+   como FALLBACK real y nunca pueden pisar los tokens que ya defina el host
+   en su propio :root, sea cual sea el orden en que se carguen las hojas.
+   Antes esto era :root a secas, lo que causaba que, al inyectarse este CSS
+   dinámicamente (normalmente después del CSS del host), sus valores
+   hardcodeados ganaban el empate de especificidad y machacaban los reales. */
+:where(:root) {
     /* ========================================================= */
     /* 1. BASE COLORS & UI                                      */
     /* ========================================================= */
