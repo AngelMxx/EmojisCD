@@ -24,9 +24,8 @@
 /* :where(:root) en vez de :root: especificidad 0, así estos valores actúan
    como FALLBACK real y nunca pueden pisar los tokens que ya defina el host
    en su propio :root, sea cual sea el orden en que se carguen las hojas.
-   Antes esto era :root a secas, lo que causaba que, al inyectarse este CSS
-   dinámicamente (normalmente después del CSS del host), sus valores
-   hardcodeados ganaban el empate de especificidad y machacaban los reales. */
+   Este picker se usa suelto en cualquier proyecto (sin CSS propio garantizado),
+   así que si el host no define sus tokens, estos son los que se usan. */
 :where(:root) {
     /* ========================================================= */
     /* 1. BASE COLORS & UI                                      */
@@ -40,7 +39,7 @@
     --hover-btn-color-1: rgba(255, 255, 255, 0.1);
     --hover-btn-color-2: rgba(255, 255, 255, 0.2);
     /* ========================================================= */
-    /* 2. ACCENT COLORS (ANTES CONFIGURABLES - AHORA FIJOS)     */
+    /* 2. ACCENT COLORS                                          */
     /* ========================================================= */
     --active-btn-color: #5662f6;
     --active-btn-color-2: #101331;
@@ -53,7 +52,7 @@
     --color-success: #20bf6b;
     --color-info: #1e90ff;
     /* ========================================================= */
-    /* 4. PHYSICS & MISC                                        */
+    /* 3. PHYSICS & MISC                                         */
     /* ========================================================= */
     --transition-0: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
     --transition-1: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -67,7 +66,6 @@
     --offline-status: rgba(255, 255, 255, 0.3);
     --border-focus: 2px solid var(--active-btn-color);
     --Switch-inactive: #2b2b2b;
-    /* Music Specifics */
     --Song-idle: #474747;
     --Song-playing: var(--active-btn-color);
     --Song-next: #20bf6b;
