@@ -662,6 +662,7 @@ const CodexEmoji = (() => {
             sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
             root.classList.add('CEP-Dragging');
         });
+        
         handle.addEventListener('pointermove', (e) => {
             if (!dragging) return;
             _dragged = true;

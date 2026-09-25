@@ -24,6 +24,7 @@ user-select: none;
 opacity: 0;
 transform: translateY(6px) scale(.985);
 transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+
 }
 
 .CEP-Popup.CEP-In {
